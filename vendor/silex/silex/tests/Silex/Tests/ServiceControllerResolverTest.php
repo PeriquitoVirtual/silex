@@ -17,73 +17,81 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Unit tests for ServiceControllerResolver, see ServiceControllerResolverRouterTest for some
- * integration tests.
+ * integration tests
  */
 class ServiceControllerResolverTest extends \PHPUnit_Framework_Testcase
 {
-    private $app;
-    private $mockCallbackResolver;
-    private $mockResolver;
-    private $resolver;
-
     public function setup()
     {
         $this->mockResolver = $this->getMockBuilder('Symfony\Component\HttpKernel\Controller\ControllerResolverInterface')
             ->disableOriginalConstructor()
             ->getMock();
-        $this->mockCallbackResolver = $this->getMockBuilder('Silex\CallbackResolver')
-            ->disableOriginalConstructor()
-            ->getMock();
 
         $this->app = new Application();
-        $this->resolver = new ServiceControllerResolver($this->mockResolver, $this->mockCallbackResolver);
+        $this->resolver = new ServiceControllerResolver($this->mockResolver, $this->app);
     }
 
     public function testShouldResolveServiceController()
     {
-        $this->mockCallbackResolver->expects($this->once())
-            ->method('isValid')
-            ->will($this->returnValue(true));
-
-        $this->mockCallbackResolver->expects($this->once())
-            ->method('convertCallback')
-            ->with('some_service:methodName')
-            ->will($this->returnValue(array('callback')));
-
-        $this->app['some_service'] = function () { return new \stdClass(); };
+        $this->app['some_service'] = function() { return new \stdClass(); };
 
         $req = Request::create('/');
         $req->attributes->set('_controller', 'some_service:methodName');
 
-        $this->assertEquals(array('callback'), $this->resolver->getController($req));
+        $this->assertEquals(
+            array($this->app['some_service'], 'methodName'),
+            $this->resolver->getController($req)
+        );
     }
 
-    public function testShouldUnresolvedControllerNames()
+    public function testShouldDelegateNonStrings()
+    {
+        $req = Request::create('/');
+        $req->attributes->set('_controller', function() {});
+
+        $this->mockResolver->expects($this->once())
+                           ->method('getController')
+                           ->with($req)
+                           ->will($this->returnValue(123));
+
+        $this->assertEquals(123, $this->resolver->getController($req));
+    }
+
+    /**
+     * Note: This doesn't test the regex extensively, just a common use case
+     */
+    public function testShouldDelegateNonMatchingSyntax()
     {
         $req = Request::create('/');
         $req->attributes->set('_controller', 'some_class::methodName');
 
-        $this->mockCallbackResolver->expects($this->once())
-            ->method('isValid')
-            ->with('some_class::methodName')
-            ->will($this->returnValue(false));
-
         $this->mockResolver->expects($this->once())
-            ->method('getController')
-            ->with($req)
-            ->will($this->returnValue(123));
+                           ->method('getController')
+                           ->with($req)
+                           ->will($this->returnValue(123));
 
         $this->assertEquals(123, $this->resolver->getController($req));
+    }
+
+    /**
+     * @expectedException          InvalidArgumentException
+     * @expectedExceptionMessage   Service "some_service" does not exist.
+     */
+    public function testShouldThrowIfServiceIsMissing()
+    {
+        $req = Request::create('/');
+        $req->attributes->set('_controller', 'some_service:methodName');
+        $this->resolver->getController($req);
     }
 
     public function testShouldDelegateGetArguments()
     {
         $req = Request::create('/');
         $this->mockResolver->expects($this->once())
-            ->method('getArguments')
-            ->with($req)
-            ->will($this->returnValue(123));
+                           ->method('getArguments')
+                           ->with($req)
+                           ->will($this->returnValue(123));
 
-        $this->assertEquals(123, $this->resolver->getArguments($req, function () {}));
+        $this->assertEquals(123, $this->resolver->getArguments($req, function() {}));
     }
 }

@@ -25,16 +25,6 @@ group them logically::
     $app->mount('/blog', $blog);
     $app->mount('/forum', $forum);
 
-    // define controllers for a admin
-    $app->mount('/admin', function ($admin) {
-        // recursively mount
-        $admin->mount('/blog', function ($user) {
-            $user->get('/', function () {
-                return 'Admin Blog home page';
-            });
-        });
-    });
-
 .. note::
 
     ``$app['controllers_factory']`` is a factory that returns a new instance
@@ -42,8 +32,7 @@ group them logically::
 
 ``mount()`` prefixes all routes with the given prefix and merges them into the
 main Application. So, ``/`` will map to the main home page, ``/blog/`` to the
-blog home page, ``/forum/`` to the forum home page, and ``/admin/blog/`` to the
-admin blog home page.
+blog home page, and ``/forum/`` to the forum home page.
 
 .. caution::
 
@@ -80,5 +69,5 @@ would secure all controllers for the backend collection::
         // app.php
         $app->mount('/blog', include 'blog.php');
 
-    Instead of requiring a file, you can also create a :ref:`Controller
-    provider <controller-providers>`.
+    Instead of requiring a file, you can also create a :doc:`Controller
+    provider </providers#controllers-providers>`.

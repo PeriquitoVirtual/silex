@@ -1,5 +1,5 @@
-Swiftmailer
-===========
+SwiftmailerServiceProvider
+==========================
 
 The *SwiftmailerServiceProvider* provides a service for sending email through
 the `Swift Mailer <http://swiftmailer.org>`_ library.
@@ -10,9 +10,6 @@ will attempt to send emails through SMTP.
 Parameters
 ----------
 
-* **swiftmailer.use_spool**: A boolean to specify whether or not to use the
-  memory spool, defaults to true.
-
 * **swiftmailer.options**: An array of options for the default SMTP-based
   configuration.
 
@@ -22,8 +19,8 @@ Parameters
   * **port**: SMTP port, defaults to 25.
   * **username**: SMTP username, defaults to an empty string.
   * **password**: SMTP password, defaults to an empty string.
-  * **encryption**: SMTP encryption, defaults to null. Valid values are 'tls', 'ssl', or null (indicating no encryption).
-  * **auth_mode**: SMTP authentication mode, defaults to null. Valid values are 'plain', 'login', 'cram-md5', or null.
+  * **encryption**: SMTP encryption, defaults to null.
+  * **auth_mode**: SMTP authentication mode, defaults to null.
 
   Example usage::
 
@@ -35,17 +32,6 @@ Parameters
         'encryption' => null,
         'auth_mode' => null
     );
-
-* **swiftmailer.sender_address**: If set, all messages will be delivered with
-  this address as the "return path" address.
-
-* **swiftmailer.delivery_addresses**: If not empty, all email messages will be
-  sent to those addresses instead of being sent to their actual recipients. This
-  is often useful when developing.
-
-* **swiftmailer.delivery_whitelist**: Used in combination with
-  ``delivery_addresses``. If set, emails matching any of these patterns will be
-  delivered like normal, as well as being sent to ``delivery_addresses``.
 
 Services
 --------
@@ -82,20 +68,24 @@ Registering
 
 .. note::
 
-    Add SwiftMailer as a dependency:
+    SwiftMailer comes with the "fat" Silex archive but not with the regular
+    one. If you are using Composer, add it as a dependency to your
+    ``composer.json`` file:
 
-    .. code-block:: bash
+    .. code-block:: json
 
-        composer require swiftmailer/swiftmailer
+        "require": {
+            "swiftmailer/swiftmailer": ">=4.1.2,<4.2-dev"
+        }
 
 Usage
 -----
 
 The Swiftmailer provider provides a ``mailer`` service::
 
-    use Symfony\Component\HttpFoundation\Request;
+    $app->post('/feedback', function () use ($app) {
+        $request = $app['request'];
 
-    $app->post('/feedback', function (Request $request) use ($app) {
         $message = \Swift_Message::newInstance()
             ->setSubject('[YourSite] Feedback')
             ->setFrom(array('noreply@yoursite.com'))
@@ -106,26 +96,6 @@ The Swiftmailer provider provides a ``mailer`` service::
 
         return new Response('Thank you for your feedback!', 201);
     });
-
-Usage in commands
-~~~~~~~~~~~~~~~~~
-
-By default, the Swiftmailer provider sends the emails using the ``KernelEvents::TERMINATE``
-event, which is fired after the response has been sent. However, as this event
-isn't fired for console commands, your emails won't be sent.
-
-For that reason, if you send emails using a command console, it is recommended
-that you disable the use of the memory spool (before accessing ``$app['mailer']``)::
-
-    $app['swiftmailer.use_spool'] = false;
-
-Alternatively, you can just make sure to flush the message spool by hand before
-ending the command execution. To do so, use the following code::
-
-    $app['swiftmailer.spooltransport']
-        ->getSpool()
-        ->flushQueue($app['swiftmailer.transport'])
-    ;
 
 Traits
 ------

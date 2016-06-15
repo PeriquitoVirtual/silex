@@ -1,9 +1,12 @@
-Doctrine
-========
+DoctrineServiceProvider
+=======================
 
 The *DoctrineServiceProvider* provides integration with the `Doctrine DBAL
-<http://www.doctrine-project.org/projects/dbal>`_ for easy database access
-(Doctrine ORM integration is **not** supplied).
+<http://www.doctrine-project.org/projects/dbal>`_ for easy database access.
+
+.. note::
+
+    There is only a Doctrine DBAL. An ORM service is **not** supplied.
 
 Parameters
 ----------
@@ -63,11 +66,15 @@ Registering
 
 .. note::
 
-    Add the Doctrine DBAL as a dependency:
+    Doctrine DBAL comes with the "fat" Silex archive but not with the regular
+    one. If you are using Composer, add it as a dependency to your
+    ``composer.json`` file:
 
-    .. code-block:: bash
+    .. code-block:: json
 
-        composer require "doctrine/dbal:~2.2"
+        "require": {
+            "doctrine/dbal": "2.2.*",
+         }
 
 Usage
 -----
@@ -99,7 +106,7 @@ and values are options::
                 'dbname'    => 'my_database',
                 'user'      => 'my_username',
                 'password'  => 'my_password',
-                'charset'   => 'utf8mb4',
+                'charset'   => 'utf8',
             ),
             'mysql_write' => array(
                 'driver'    => 'pdo_mysql',
@@ -107,7 +114,7 @@ and values are options::
                 'dbname'    => 'my_database',
                 'user'      => 'my_username',
                 'password'  => 'my_password',
-                'charset'   => 'utf8mb4',
+                'charset'   => 'utf8',
             ),
         ),
     ));
@@ -116,9 +123,9 @@ The first registered connection is the default and can simply be accessed as
 you would if there was only one connection. Given the above configuration,
 these two lines are equivalent::
 
-    $app['db']->fetchAll('SELECT * FROM table');
+    $app['db']->fetchAssoc('SELECT * FROM table');
 
-    $app['dbs']['mysql_read']->fetchAll('SELECT * FROM table');
+    $app['dbs']['mysql_read']->fetchAssoc('SELECT * FROM table');
 
 Using multiple connections::
 

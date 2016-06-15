@@ -19,7 +19,7 @@ $app['clienteService'] = function (){
 $app->get("/", function() use ($app)  {
 
     return $app['twig']->render('index.twig',[]);
-});
+})->bind("index");
 
 $app->get("/ola/{nome}", function ($nome) use ($app){
     return $app['twig']->render('ola.twig',['nome'=>$nome]);
@@ -31,7 +31,7 @@ $app->get("/clientes", function() use($app){
     
     return $app['twig']->render('clientes.twig', ['clientes'=>$dados]);
     
-});
+})->bind("clientes");
 
 $app->get("/cliente", function () use ($app) {
 

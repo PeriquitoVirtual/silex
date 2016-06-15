@@ -14,13 +14,12 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
         'S' => 
         array (
             'Symfony\\Polyfill\\Mbstring\\' => 26,
-            'Symfony\\Component\\Routing\\' => 26,
-            'Symfony\\Component\\HttpKernel\\' => 29,
-            'Symfony\\Component\\HttpFoundation\\' => 33,
-            'Symfony\\Component\\EventDispatcher\\' => 34,
             'Symfony\\Component\\Debug\\' => 24,
             'Symfony\\Bridge\\Twig\\' => 20,
-            'Silex\\' => 6,
+        ),
+        'C' => 
+        array (
+            'Code\\Sistema\\' => 13,
         ),
     );
 
@@ -28,22 +27,6 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
         'Symfony\\Polyfill\\Mbstring\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
-        ),
-        'Symfony\\Component\\Routing\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/routing',
-        ),
-        'Symfony\\Component\\HttpKernel\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/http-kernel',
-        ),
-        'Symfony\\Component\\HttpFoundation\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/http-foundation',
-        ),
-        'Symfony\\Component\\EventDispatcher\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
         ),
         'Symfony\\Component\\Debug\\' => 
         array (
@@ -53,9 +36,9 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
         array (
             0 => __DIR__ . '/..' . '/symfony/twig-bridge',
         ),
-        'Silex\\' => 
+        'Code\\Sistema\\' => 
         array (
-            0 => __DIR__ . '/..' . '/silex/silex/src/Silex',
+            0 => __DIR__ . '/../..' . '/src/Code/Sistema',
         ),
     );
 
@@ -67,6 +50,29 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
                 0 => __DIR__ . '/..' . '/twig/twig/lib',
             ),
         ),
+        'S' => 
+        array (
+            'Symfony\\Component\\Routing\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/symfony/routing',
+            ),
+            'Symfony\\Component\\HttpKernel\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/symfony/http-kernel',
+            ),
+            'Symfony\\Component\\HttpFoundation\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/symfony/http-foundation',
+            ),
+            'Symfony\\Component\\EventDispatcher\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
+            ),
+            'Silex' => 
+            array (
+                0 => __DIR__ . '/..' . '/silex/silex/src',
+            ),
+        ),
         'P' => 
         array (
             'Psr\\Log\\' => 
@@ -75,9 +81,14 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
             ),
             'Pimple' => 
             array (
-                0 => __DIR__ . '/..' . '/pimple/pimple/src',
+                0 => __DIR__ . '/..' . '/pimple/pimple/lib',
             ),
         ),
+    );
+
+    public static $classMap = array (
+        'SessionHandlerInterface' => __DIR__ . '/..' . '/symfony/http-foundation/Symfony/Component/HttpFoundation/Resources/stubs/SessionHandlerInterface.php',
+        'Symfony\\Component\\HttpFoundation\\Resources\\stubs\\FakeFile' => __DIR__ . '/..' . '/symfony/http-foundation/Symfony/Component/HttpFoundation/Resources/stubs/FakeFile.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
@@ -86,6 +97,7 @@ class ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c
             $loader->prefixLengthsPsr4 = ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c::$prefixLengthsPsr4;
             $loader->prefixDirsPsr4 = ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c::$prefixDirsPsr4;
             $loader->prefixesPsr0 = ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInit56c5febade7e159782c6c63e0b4ce33c::$classMap;
 
         }, null, ClassLoader::class);
     }

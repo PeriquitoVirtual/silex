@@ -19,53 +19,12 @@ use Symfony\Component\HttpFoundation\Request;
  * SecurityTrait test cases.
  *
  * @author Fabien Potencier <fabien@symfony.com>
+ *
+ * @requires PHP 5.4
  */
 class SecurityTraitTest extends \PHPUnit_Framework_TestCase
 {
-    public function testSecureWithNoAuthenticatedUser()
-    {
-        $app = $this->createApplication();
-
-        $app->get('/', function () { return 'foo'; })
-            ->secure('ROLE_ADMIN')
-        ;
-
-        $request = Request::create('/');
-        $response = $app->handle($request);
-        $this->assertEquals(401, $response->getStatusCode());
-    }
-
-    public function testSecureWithAuthorizedRoles()
-    {
-        $app = $this->createApplication();
-
-        $app->get('/', function () { return 'foo'; })
-            ->secure('ROLE_ADMIN')
-        ;
-
-        $request = Request::create('/');
-        $request->headers->set('PHP_AUTH_USER', 'fabien');
-        $request->headers->set('PHP_AUTH_PW', 'foo');
-        $response = $app->handle($request);
-        $this->assertEquals(200, $response->getStatusCode());
-    }
-
-    public function testSecureWithUnauthorizedRoles()
-    {
-        $app = $this->createApplication();
-
-        $app->get('/', function () { return 'foo'; })
-            ->secure('ROLE_SUPER_ADMIN')
-        ;
-
-        $request = Request::create('/');
-        $request->headers->set('PHP_AUTH_USER', 'fabien');
-        $request->headers->set('PHP_AUTH_PW', 'foo');
-        $response = $app->handle($request);
-        $this->assertEquals(403, $response->getStatusCode());
-    }
-
-    private function createApplication()
+    public function testSecure()
     {
         $app = new Application();
         $app['route_class'] = 'Silex\Tests\Route\SecurityRoute';
@@ -74,12 +33,24 @@ class SecurityTraitTest extends \PHPUnit_Framework_TestCase
                 'default' => array(
                     'http' => true,
                     'users' => array(
-                        'fabien' => array('ROLE_ADMIN', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
+                        'fabien' => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
                     ),
                 ),
             ),
         ));
 
-        return $app;
+        $app->get('/', function () { return 'foo'; })
+            ->secure('ROLE_ADMIN')
+        ;
+
+        $request = Request::create('/');
+        $response = $app->handle($request);
+        $this->assertEquals(401, $response->getStatusCode());
+
+        $request = Request::create('/');
+        $request->headers->set('PHP_AUTH_USER', 'fabien');
+        $request->headers->set('PHP_AUTH_PW', 'foo');
+        $response = $app->handle($request);
+        $this->assertEquals(200, $response->getStatusCode());
     }
 }

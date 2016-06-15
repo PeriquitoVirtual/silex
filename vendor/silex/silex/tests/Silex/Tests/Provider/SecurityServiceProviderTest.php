@@ -16,12 +16,11 @@ use Silex\WebTestCase;
 use Silex\Provider\SecurityServiceProvider;
 use Silex\Provider\SessionServiceProvider;
 use Silex\Provider\ValidatorServiceProvider;
-use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\HttpKernel\Client;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * SecurityServiceProvider.
+ * SecurityServiceProvider
  *
  * @author Fabien Potencier <fabien@symfony.com>
  */
@@ -55,7 +54,7 @@ class SecurityServiceProviderTest extends WebTestCase
         $this->assertEquals('ANONYMOUS', $client->getResponse()->getContent());
 
         $client->request('post', '/login_check', array('_username' => 'fabien', '_password' => 'bar'));
-        $this->assertContains('Bad credentials', $app['security.last_error']($client->getRequest()));
+        $this->assertEquals('Bad credentials', $app['security.last_error']($client->getRequest()));
         // hack to re-close the session as the previous assertions re-opens it
         $client->getRequest()->getSession()->save();
 
@@ -120,30 +119,12 @@ class SecurityServiceProviderTest extends WebTestCase
         $this->assertEquals('admin', $client->getResponse()->getContent());
     }
 
-    public function testGuardAuthentication()
-    {
-        $app = $this->createApplication('guard');
-
-        $client = new Client($app);
-
-        $client->request('get', '/');
-        $this->assertEquals(401, $client->getResponse()->getStatusCode(), 'The entry point is configured');
-        $this->assertEquals('{"message":"Authentication Required"}', $client->getResponse()->getContent());
-
-        $client->request('get', '/', array(), array(), array('HTTP_X_AUTH_TOKEN' => 'lili:not the secret'));
-        $this->assertEquals(403, $client->getResponse()->getStatusCode(), 'User not found');
-        $this->assertEquals('{"message":"Username could not be found."}', $client->getResponse()->getContent());
-
-        $client->request('get', '/', array(), array(), array('HTTP_X_AUTH_TOKEN' => 'victoria:not the secret'));
-        $this->assertEquals(403, $client->getResponse()->getStatusCode(), 'Invalid credentials');
-        $this->assertEquals('{"message":"Invalid credentials."}', $client->getResponse()->getContent());
-
-        $client->request('get', '/', array(), array(), array('HTTP_X_AUTH_TOKEN' => 'victoria:victoriasecret'));
-        $this->assertEquals('victoria', $client->getResponse()->getContent());
-    }
-
     public function testUserPasswordValidatorIsRegistered()
     {
+        if (!is_dir(__DIR__.'/../../../../vendor/symfony/validator')) {
+            $this->markTestSkipped('Validator dependency was not installed.');
+        }
+
         $app = new Application();
 
         $app->register(new ValidatorServiceProvider());
@@ -154,7 +135,7 @@ class SecurityServiceProviderTest extends WebTestCase
                     'http' => true,
                     'users' => array(
                         'admin' => array('ROLE_ADMIN', '513aeb0121909'),
-                    ),
+                    )
                 ),
             ),
         ));
@@ -162,132 +143,6 @@ class SecurityServiceProviderTest extends WebTestCase
         $app->boot();
 
         $this->assertInstanceOf('Symfony\Component\Security\Core\Validator\Constraints\UserPasswordValidator', $app['security.validator.user_password_validator']);
-    }
-
-    public function testExposedExceptions()
-    {
-        $app = $this->createApplication('form');
-        $app['security.hide_user_not_found'] = false;
-
-        $client = new Client($app);
-
-        $client->request('get', '/');
-        $this->assertEquals('ANONYMOUS', $client->getResponse()->getContent());
-
-        $client->request('post', '/login_check', array('_username' => 'fabien', '_password' => 'bar'));
-        $this->assertEquals('The presented password is invalid.', $app['security.last_error']($client->getRequest()));
-        $client->getRequest()->getSession()->save();
-
-        $client->request('post', '/login_check', array('_username' => 'unknown', '_password' => 'bar'));
-        $this->assertEquals('Username "unknown" does not exist.', $app['security.last_error']($client->getRequest()));
-        $client->getRequest()->getSession()->save();
-    }
-
-    public function testFakeRoutesAreSerializable()
-    {
-        $app = new Application();
-
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'admin' => array(
-                    'logout' => true,
-                ),
-            ),
-        ));
-
-        $app->boot();
-        $app->flush();
-
-        $this->assertCount(1, unserialize(serialize($app['routes'])));
-    }
-
-    public function testUser()
-    {
-        $app = new Application();
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'default' => array(
-                    'http' => true,
-                    'users' => array(
-                        'fabien' => array('ROLE_ADMIN', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
-                    ),
-                ),
-            ),
-        ));
-        $app->get('/', function () { return 'foo'; });
-
-        $request = Request::create('/');
-        $app->handle($request);
-        $this->assertNull($app['user']);
-
-        $request->headers->set('PHP_AUTH_USER', 'fabien');
-        $request->headers->set('PHP_AUTH_PW', 'foo');
-        $app->handle($request);
-        $this->assertInstanceOf('Symfony\Component\Security\Core\User\UserInterface', $app['user']);
-        $this->assertEquals('fabien', $app['user']->getUsername());
-    }
-
-    public function testUserWithNoToken()
-    {
-        $app = new Application();
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'default' => array(
-                    'http' => true,
-                ),
-            ),
-        ));
-
-        $request = Request::create('/');
-
-        $app->get('/', function () { return 'foo'; });
-        $app->handle($request);
-        $this->assertNull($app['user']);
-    }
-
-    public function testUserWithInvalidUser()
-    {
-        $app = new Application();
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'default' => array(
-                    'http' => true,
-                ),
-            ),
-        ));
-
-        $request = Request::create('/');
-        $app->boot();
-        $app['security.token_storage']->setToken(new UsernamePasswordToken('foo', 'foo', 'foo'));
-
-        $app->get('/', function () { return 'foo'; });
-        $app->handle($request);
-        $this->assertNull($app['user']);
-    }
-
-    public function testAccessRulePathArray()
-    {
-        $app = new Application();
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'default' => array(
-                    'http' => true,
-                ),
-            ),
-            'security.access_rules' => array(
-                array(array(
-                    'path' => '^/admin',
-                ), 'ROLE_ADMIN'),
-            ),
-        ));
-
-        $request = Request::create('/admin');
-        $app->boot();
-        $accessMap = $app['security.access_map'];
-        $this->assertEquals($accessMap->getPatterns($request), array(
-            array('ROLE_ADMIN'),
-            '',
-        ));
     }
 
     public function createApplication($authenticationMethod = 'form')
@@ -312,14 +167,12 @@ class SecurityServiceProviderTest extends WebTestCase
                 'default' => array(
                     'pattern' => '^.*$',
                     'anonymous' => true,
-                    'form' => array(
-                        'require_previous_session' => false,
-                    ),
+                    'form' => true,
                     'logout' => true,
                     'users' => array(
                         // password is foo
-                        'fabien' => array('ROLE_USER', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
-                        'admin' => array('ROLE_ADMIN', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
+                        'fabien' => array('ROLE_USER', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
+                        'admin'  => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
                     ),
                 ),
             ),
@@ -331,29 +184,29 @@ class SecurityServiceProviderTest extends WebTestCase
             ),
         ));
 
-        $app->get('/login', function (Request $request) use ($app) {
+        $app->get('/login', function(Request $request) use ($app) {
             $app['session']->start();
 
             return $app['security.last_error']($request);
         });
 
-        $app->get('/', function () use ($app) {
-            $user = $app['security.token_storage']->getToken()->getUser();
+        $app->get('/', function() use ($app) {
+            $user = $app['security']->getToken()->getUser();
 
             $content = is_object($user) ? $user->getUsername() : 'ANONYMOUS';
 
-            if ($app['security.authorization_checker']->isGranted('IS_AUTHENTICATED_FULLY')) {
+            if ($app['security']->isGranted('IS_AUTHENTICATED_FULLY')) {
                 $content .= 'AUTHENTICATED';
             }
 
-            if ($app['security.authorization_checker']->isGranted('ROLE_ADMIN')) {
+            if ($app['security']->isGranted('ROLE_ADMIN')) {
                 $content .= 'ADMIN';
             }
 
             return $content;
         });
 
-        $app->get('/admin', function () use ($app) {
+        $app->get('/admin', function() use ($app) {
             return 'admin';
         });
 
@@ -369,8 +222,8 @@ class SecurityServiceProviderTest extends WebTestCase
                     'http' => true,
                     'users' => array(
                         // password is foo
-                        'dennis' => array('ROLE_USER', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
-                        'admin' => array('ROLE_ADMIN', '$2y$15$lzUNsTegNXvZW3qtfucV0erYBcEqWVeyOmjolB7R1uodsAVJ95vvu'),
+                        'dennis' => array('ROLE_USER', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
+                        'admin'  => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
                     ),
                 ),
             ),
@@ -382,58 +235,25 @@ class SecurityServiceProviderTest extends WebTestCase
             ),
         ));
 
-        $app->get('/', function () use ($app) {
-            $user = $app['security.token_storage']->getToken()->getUser();
+        $app->get('/', function() use ($app) {
+            $user = $app['security']->getToken()->getUser();
+
             $content = is_object($user) ? $user->getUsername() : 'ANONYMOUS';
 
-            if ($app['security.authorization_checker']->isGranted('IS_AUTHENTICATED_FULLY')) {
+            if ($app['security']->isGranted('IS_AUTHENTICATED_FULLY')) {
                 $content .= 'AUTHENTICATED';
             }
 
-            if ($app['security.authorization_checker']->isGranted('ROLE_ADMIN')) {
+            if ($app['security']->isGranted('ROLE_ADMIN')) {
                 $content .= 'ADMIN';
             }
 
             return $content;
         });
 
-        $app->get('/admin', function () use ($app) {
+        $app->get('/admin', function() use ($app) {
             return 'admin';
         });
-
-        return $app;
-    }
-
-    private function addGuardAuthentication($app)
-    {
-        $app['app.authenticator.token'] = function ($app) {
-            return new SecurityServiceProviderTest\TokenAuthenticator($app);
-        };
-
-        $app->register(new SecurityServiceProvider(), array(
-            'security.firewalls' => array(
-                'guard' => array(
-                    'pattern' => '^.*$',
-                    'form' => true,
-                    'guard' => array(
-                        'authenticators' => array(
-                            'app.authenticator.token',
-                        ),
-                    ),
-                    'users' => array(
-                        'victoria' => array('ROLE_USER', 'victoriasecret'),
-                    ),
-                ),
-            ),
-        ));
-
-        $app->get('/', function () use ($app) {
-            $user = $app['security.token_storage']->getToken()->getUser();
-
-            $content = is_object($user) ? $user->getUsername() : 'ANONYMOUS';
-
-            return $content;
-        })->bind('homepage');
 
         return $app;
     }

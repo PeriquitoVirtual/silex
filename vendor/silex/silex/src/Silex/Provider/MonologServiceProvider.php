@@ -11,26 +11,23 @@
 
 namespace Silex\Provider;
 
-use Pimple\Container;
-use Pimple\ServiceProviderInterface;
-use Monolog\Formatter\LineFormatter;
 use Monolog\Logger;
-use Monolog\Handler;
-use Monolog\ErrorHandler;
+use Monolog\Handler\StreamHandler;
 use Silex\Application;
-use Silex\Api\BootableProviderInterface;
+use Silex\ServiceProviderInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bridge\Monolog\Handler\DebugHandler;
-use Symfony\Bridge\Monolog\Handler\FingersCrossed\NotFoundActivationStrategy;
-use Silex\EventListener\LogListener;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * Monolog Provider.
  *
  * @author Fabien Potencier <fabien@symfony.com>
  */
-class MonologServiceProvider implements ServiceProviderInterface, BootableProviderInterface
+class MonologServiceProvider implements ServiceProviderInterface
 {
-    public function register(Container $app)
+    public function register(Application $app)
     {
         $app['logger'] = function () use ($app) {
             return $app['monolog'];
@@ -38,102 +35,52 @@ class MonologServiceProvider implements ServiceProviderInterface, BootableProvid
 
         if ($bridge = class_exists('Symfony\Bridge\Monolog\Logger')) {
             $app['monolog.handler.debug'] = function () use ($app) {
-                $level = MonologServiceProvider::translateLevel($app['monolog.level']);
-
-                return new DebugHandler($level);
+                return new DebugHandler($app['monolog.level']);
             };
-
-            if (isset($app['request_stack'])) {
-                $app['monolog.not_found_activation_strategy'] = function () use ($app) {
-                    return new NotFoundActivationStrategy($app['request_stack'], array('^/'), $app['monolog.level']);
-                };
-            }
         }
 
         $app['monolog.logger.class'] = $bridge ? 'Symfony\Bridge\Monolog\Logger' : 'Monolog\Logger';
 
-        $app['monolog'] = function ($app) {
+        $app['monolog'] = $app->share(function ($app) {
             $log = new $app['monolog.logger.class']($app['monolog.name']);
 
-            $handler = new Handler\GroupHandler($app['monolog.handlers']);
-            if (isset($app['monolog.not_found_activation_strategy'])) {
-                $handler = new Handler\FingersCrossedHandler($handler, $app['monolog.not_found_activation_strategy']);
-            }
-
-            $log->pushHandler($handler);
+            $log->pushHandler($app['monolog.handler']);
 
             if ($app['debug'] && isset($app['monolog.handler.debug'])) {
                 $log->pushHandler($app['monolog.handler.debug']);
             }
 
             return $log;
-        };
+        });
 
-        $app['monolog.formatter'] = function () {
-            return new LineFormatter();
-        };
-
-        $app['monolog.handler'] = $defaultHandler = function () use ($app) {
-            $level = MonologServiceProvider::translateLevel($app['monolog.level']);
-
-            $handler = new Handler\StreamHandler($app['monolog.logfile'], $level, $app['monolog.bubble'], $app['monolog.permission']);
-            $handler->setFormatter($app['monolog.formatter']);
-
-            return $handler;
-        };
-
-        $app['monolog.handlers'] = function () use ($app, $defaultHandler) {
-            $handlers = array();
-
-            // enables the default handler if a logfile was set or the monolog.handler service was redefined
-            if ($app['monolog.logfile'] || $defaultHandler !== $app->raw('monolog.handler')) {
-                $handlers[] = $app['monolog.handler'];
-            }
-
-            return $handlers;
+        $app['monolog.handler'] = function () use ($app) {
+            return new StreamHandler($app['monolog.logfile'], $app['monolog.level']);
         };
 
         $app['monolog.level'] = function () {
             return Logger::DEBUG;
         };
 
-        $app['monolog.listener'] = function () use ($app) {
-            return new LogListener($app['logger'], $app['monolog.exception.logger_filter']);
-        };
-
-        $app['monolog.name'] = 'app';
-        $app['monolog.bubble'] = true;
-        $app['monolog.permission'] = null;
-        $app['monolog.exception.logger_filter'] = null;
-        $app['monolog.logfile'] = null;
-        $app['monolog.use_error_handler'] = !$app['debug'];
+        $app['monolog.name'] = 'myapp';
     }
 
     public function boot(Application $app)
     {
-        if ($app['monolog.use_error_handler']) {
-            ErrorHandler::register($app['monolog']);
-        }
+        $app->before(function (Request $request) use ($app) {
+            $app['monolog']->addInfo('> '.$request->getMethod().' '.$request->getRequestUri());
+        });
 
-        if (isset($app['monolog.listener'])) {
-            $app['dispatcher']->addSubscriber($app['monolog.listener']);
-        }
-    }
+        $app->error(function (\Exception $e) use ($app) {
+            $message = sprintf('%s: %s (uncaught exception) at %s line %s', get_class($e), $e->getMessage(), $e->getFile(), $e->getLine());
+            if ($e instanceof HttpExceptionInterface && $e->getStatusCode() < 500) {
+                $app['monolog']->addError($message, array('exception' => $e));
+            } else {
+                $app['monolog']->addCritical($message, array('exception' => $e));
+            }
+        }, 255);
 
-    public static function translateLevel($name)
-    {
-        // level is already translated to logger constant, return as-is
-        if (is_int($name)) {
-            return $name;
-        }
-
-        $levels = Logger::getLevels();
-        $upper = strtoupper($name);
-
-        if (!isset($levels[$upper])) {
-            throw new \InvalidArgumentException("Provided logging level '$name' does not exist. Must be a valid monolog logging level.");
-        }
-
-        return $levels[$upper];
+        $app->after(function (Request $request, Response $response) use ($app) {
+            $app['monolog']->addInfo('< '.$response->getStatusCode());
+        });
     }
 }

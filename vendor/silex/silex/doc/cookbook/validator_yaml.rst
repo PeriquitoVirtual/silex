@@ -1,15 +1,18 @@
-Using YAML to configure Validation
-==================================
+How to use YAML to configure validation
+=======================================
 
 Simplicity is at the heart of Silex so there is no out of the box solution to
 use YAML files for validation. But this doesn't mean that this is not
 possible. Let's see how to do it.
 
-First, you need to install the YAML Component:
+First, you need to install the YAML Component. Declare it as a dependency in
+your ``composer.json`` file:
 
-.. code-block:: bash
+.. code-block:: json
 
-    composer require symfony/yaml
+    "require": {
+        "symfony/yaml": "~2.3"
+    }
 
 Next, you need to tell the Validation Service that you are not using
 ``StaticMethodLoader`` to load your class metadata but a YAML file::

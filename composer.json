@@ -1,12 +1,12 @@
 {
     "require": {
-        "silex/silex": "^2.0",
+        "silex/silex": "1.1",
         "twig/twig": "^1.24",
         "symfony/twig-bridge": "^3.1"
     },
 
     "autoload": {
-        "PSR-4": {
+        "psr-4": {
             "Code\\Sistema\\":"src/Code/Sistema/"
         }
     }

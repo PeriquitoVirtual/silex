@@ -1,5 +1,5 @@
-Security
-========
+SecurityServiceProvider
+=======================
 
 The *SecurityServiceProvider* manages authentication and authorization for
 your applications.
@@ -7,18 +7,13 @@ your applications.
 Parameters
 ----------
 
-* **security.hide_user_not_found** (optional): Defines whether to hide user not
-  found exception or not. Defaults to ``true``.
-
-* **security.encoder.bcrypt.cost** (optional): Defines BCrypt password encoder cost. Defaults to 13.
+n/a
 
 Services
 --------
 
-* **security.token_storage**: Gives access to the user token.
-
-* **security.authorization_checker**: Allows to check authorizations for the
-  users.
+* **security**: The main entry point for the security provider. Use it to get
+  the current user token.
 
 * **security.authentication_manager**: An instance of
   `AuthenticationProviderManager
@@ -38,17 +33,9 @@ Services
   Request object.
 
 * **security.encoder_factory**: Defines the encoding strategies for user
-  passwords (uses ``security.default_encoder``).
+  passwords (default to use a digest algorithm for all users).
 
-* **security.default_encoder**: The encoder to use by default for all users (BCrypt).
-
-* **security.encoder.digest**: Digest password encoder.
-
-* **security.encoder.bcrypt**: BCrypt password encoder.
-
-* **security.encoder.pbkdf2**: Pbkdf2 password encoder.
-
-* **user**: Returns the current user
+* **security.encoder.digest**: The encoder to use by default for all users.
 
 .. note::
 
@@ -66,16 +53,15 @@ Registering
 
 .. note::
 
-    Add the Symfony Security Component as a dependency:
+    The Symfony Security Component comes with the "fat" Silex archive but not
+    with the regular one. If you are using Composer, add it as a dependency to
+    your ``composer.json`` file:
 
-    .. code-block:: bash
+    .. code-block:: json
 
-        composer require symfony/security
-
-.. caution::
-
-    If you're using a form to authenticate users, you need to enable
-    ``SessionServiceProvider``.
+        "require": {
+            "symfony/security": "~2.3"
+        }
 
 .. caution::
 
@@ -83,13 +69,13 @@ Registering
     booted. So, if you want to use it outside of the handling of a request,
     don't forget to call ``boot()`` first::
 
-        $app->boot();
+        $application->boot();
 
 Usage
 -----
 
 The Symfony Security component is powerful. To learn more about it, read the
-`Symfony Security documentation
+`Symfony2 Security documentation
 <http://symfony.com/doc/2.3/book/security.html>`_.
 
 .. tip::
@@ -106,7 +92,7 @@ Accessing the current User
 The current user information is stored in a token that is accessible via the
 ``security`` service::
 
-    $token = $app['security.token_storage']->getToken();
+    $token = $app['security']->getToken();
 
 If there is no information about the user, the token is ``null``. If the user
 is known, you can get it with a call to ``getUser()``::
@@ -131,29 +117,15 @@ under ``/admin/``::
             'http' => true,
             'users' => array(
                 // raw password is foo
-                'admin' => array('ROLE_ADMIN', '$2y$10$3i9/lVd8UOFIJ6PAMFt8gu3/r5g0qeCJvoSlLCsvMTythye19F77a'),
+                'admin' => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
             ),
         ),
     );
 
-The ``pattern`` is a regular expression on the URL path; the ``http`` setting
-tells the security layer to use HTTP basic authentication and the ``users``
-entry defines valid users.
-
-If you want to restrict the firewall by more than the URL pattern (like the
-HTTP method, the client IP, the hostname, or any Request attributes), use an
-instance of a `RequestMatcher
+The ``pattern`` is a regular expression (it can also be a `RequestMatcher
 <http://api.symfony.com/master/Symfony/Component/HttpFoundation/RequestMatcher.html>`_
-for the ``pattern`` option::
-
-    use Symfony/Component/HttpFoundation/RequestMatcher;
-
-    $app['security.firewalls'] = array(
-        'admin' => array(
-            'pattern' => new RequestMatcher('^/admin', 'example.com', 'POST'),
-            // ...
-        ),
-    );
+instance); the ``http`` setting tells the security layer to use HTTP basic
+authentication and the ``users`` entry defines valid users.
 
 Each user is defined with the following information:
 
@@ -180,19 +152,6 @@ When the user is authenticated, the user stored in the token is an instance of
 `User
 <http://api.symfony.com/master/Symfony/Component/Security/Core/User/User.html>`_
 
-.. caution::
-
-    If you are using php-cgi under Apache, you need to add this configuration
-    to make things work correctly:
-
-    .. code-block:: apache
-
-        RewriteEngine On
-        RewriteCond %{HTTP:Authorization} ^(.+)$
-        RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteRule ^(.*)$ app.php [QSA,L]
-
 Securing a Path with a Form
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -200,9 +159,9 @@ Using a form to authenticate users is very similar to the above configuration.
 Instead of using the ``http`` setting, use the ``form`` one and define these
 two parameters:
 
-* **login_path**: The login path where the user is redirected when they are
-  accessing a secured area without being authenticated so that they can enter
-  their credentials;
+* **login_path**: The login path where the user is redirected when he is
+  accessing a secured area without being authenticated so that he can enter
+  his credentials;
 
 * **check_path**: The check URL used by Symfony to validate the credentials of
   the user.
@@ -214,7 +173,7 @@ Here is how to secure all URLs under ``/admin/`` with a form::
             'pattern' => '^/admin/',
             'form' => array('login_path' => '/login', 'check_path' => '/admin/login_check'),
             'users' => array(
-                'admin' => array('ROLE_ADMIN', '$2y$10$3i9/lVd8UOFIJ6PAMFt8gu3/r5g0qeCJvoSlLCsvMTythye19F77a'),
+                'admin' => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
             ),
         ),
     );
@@ -279,7 +238,7 @@ It's also useful when you want to secure all URLs except the login form::
             'pattern' => '^.*$',
             'form' => array('login_path' => '/login', 'check_path' => '/login_check'),
             'users' => array(
-                'admin' => array('ROLE_ADMIN', '$2y$10$3i9/lVd8UOFIJ6PAMFt8gu3/r5g0qeCJvoSlLCsvMTythye19F77a'),
+                'admin' => array('ROLE_ADMIN', '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg=='),
             ),
         ),
     );
@@ -314,7 +273,7 @@ pattern::
         'secured' => array(
             'pattern' => '^/admin/',
             'form' => array('login_path' => '/login', 'check_path' => '/admin/login_check'),
-            'logout' => array('logout_path' => '/admin/logout', 'invalidate_session' => true),
+            'logout' => array('logout_path' => '/admin/logout'),
 
             // ...
         ),
@@ -352,7 +311,7 @@ Checking User Roles
 To check if a user is granted some role, use the ``isGranted()`` method on the
 security context::
 
-    if ($app['security.authorization_checker']->isGranted('ROLE_ADMIN')) {
+    if ($app['security']->isGranted('ROLE_ADMIN')) {
         // ...
     }
 
@@ -412,7 +371,7 @@ parameter to any URL when logged in as a user who has the
 
 You can check that you are impersonating a user by checking the special
 ``ROLE_PREVIOUS_ADMIN``. This is useful for instance to allow the user to
-switch back to their primary account:
+switch back to his primary account:
 
 .. code-block:: jinja
 
@@ -467,9 +426,9 @@ The ``users`` setting can be defined as a service that returns an instance of
 `UserProviderInterface
 <http://api.symfony.com/master/Symfony/Component/Security/Core/User/UserProviderInterface.html>`_::
 
-    'users' => function () use ($app) {
+    'users' => $app->share(function () use ($app) {
         return new UserProvider($app['db']);
-    },
+    }),
 
 Here is a simple example of a user provider, where Doctrine DBAL is used to
 store the users::
@@ -540,13 +499,13 @@ sample users::
 
         $app['db']->insert('users', array(
           'username' => 'fabien',
-          'password' => '$2y$10$3i9/lVd8UOFIJ6PAMFt8gu3/r5g0qeCJvoSlLCsvMTythye19F77a',
+          'password' => '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg==',
           'roles' => 'ROLE_USER'
         ));
 
         $app['db']->insert('users', array(
           'username' => 'admin',
-          'password' => '$2y$10$3i9/lVd8UOFIJ6PAMFt8gu3/r5g0qeCJvoSlLCsvMTythye19F77a',
+          'password' => '5FZ2Z8QIkA7UTZ4BYkoC+GsReLf569mSKDsfods6LYQ8t+a8EW9oaircfMpmaLbPBh4FOBiiFyLfuZmTSUwzZg==',
           'roles' => 'ROLE_ADMIN'
         ));
     }
@@ -560,35 +519,19 @@ sample users::
 Defining a custom Encoder
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, Silex uses the ``BCrypt`` algorithm to encode passwords.
-Additionally, the password is encoded multiple times.
-You can change these defaults by overriding ``security.default_encoder``
-service to return one of the predefined encoders:
+By default, Silex uses the ``sha512`` algorithm to encode passwords.
+Additionally, the password is encoded multiple times and converted to base64.
+You can change these defaults by overriding the ``security.encoder.digest``
+service::
 
-* **security.encoder.digest**: Digest password encoder.
+    use Symfony\Component\Security\Core\Encoder\MessageDigestPasswordEncoder;
 
-* **security.encoder.bcrypt**: BCrypt password encoder.
-
-* **security.encoder.pbkdf2**: Pbkdf2 password encoder.
-
-.. code-block:: php
-
-    $app['security.default_encoder'] = function ($app) {
-        return $app['security.encoder.pbkdf2'];
-    };
-
-Or you can define you own, fully customizable encoder::
-
-    use Symfony\Component\Security\Core\Encoder\PlaintextPasswordEncoder;
-
-    $app['security.default_encoder'] = function ($app) {
-        // Plain text (e.g. for debugging)
-        return new PlaintextPasswordEncoder();
-    };
-
-.. tip::
-
-    You can change the default BCrypt encoding cost by overriding ``security.encoder.bcrypt.cost``
+    $app['security.encoder.digest'] = $app->share(function ($app) {
+        // use the sha1 algorithm
+        // don't base64 encode the password
+        // use only 1 iteration
+        return new MessageDigestPasswordEncoder('sha1', false, 1);
+    });
 
 Defining a custom Authentication Provider
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -601,14 +544,14 @@ use in your configuration::
 
     $app['security.authentication_listener.factory.wsse'] = $app->protect(function ($name, $options) use ($app) {
         // define the authentication provider object
-        $app['security.authentication_provider.'.$name.'.wsse'] = function () use ($app) {
+        $app['security.authentication_provider.'.$name.'.wsse'] = $app->share(function () use ($app) {
             return new WsseProvider($app['security.user_provider.default'], __DIR__.'/security_cache');
-        };
+        });
 
         // define the authentication listener object
-        $app['security.authentication_listener.'.$name.'.wsse'] = function () use ($app) {
-            return new WsseListener($app['security.token_storage'], $app['security.authentication_manager']);
-        };
+        $app['security.authentication_listener.'.$name.'.wsse'] = $app->share(function () use ($app) {
+            return new WsseListener($app['security'], $app['security.authentication_manager']);
+        });
 
         return array(
             // the authentication provider id
@@ -642,13 +585,6 @@ argument of your authentication factory (see above).
 This example uses the authentication provider classes as described in the
 Symfony `cookbook`_.
 
-
-.. note::
-
-    The Guard component simplifies the creation of custom authentication
-    providers. :doc:`How to Create a Custom Authentication System with Guard
-    </cookbook/guard_authentication>`
-
 Stateless Authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -671,6 +607,8 @@ Traits
 
 ``Silex\Application\SecurityTrait`` adds the following shortcuts:
 
+* **user**: Returns the current user.
+
 * **encodePassword**: Encode a given password.
 
 .. code-block:: php
@@ -688,24 +626,5 @@ Traits
     $app->get('/', function () {
         // do something but only for admins
     })->secure('ROLE_ADMIN');
-
-.. caution::
-
-    The ``Silex\Route\SecurityTrait`` must be used with a user defined
-    ``Route`` class, not the application.
-
-    .. code-block:: php
-
-        use Silex\Route;
-
-        class MyRoute extends Route
-        {
-            use Route\SecurityTrait;
-        }
-
-    .. code-block:: php
-
-        $app['route_class'] = 'MyRoute';
-
 
 .. _cookbook: http://symfony.com/doc/current/cookbook/security/custom_authentication_provider.html

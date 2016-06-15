@@ -11,17 +11,13 @@
 
 namespace Silex\Provider;
 
-use Pimple\Container;
-use Pimple\ServiceProviderInterface;
-use Symfony\Bridge\Twig\AppVariable;
-use Symfony\Bridge\Twig\Extension\AssetExtension;
-use Symfony\Bridge\Twig\Extension\DumpExtension;
+use Silex\Application;
+use Silex\ServiceProviderInterface;
+
 use Symfony\Bridge\Twig\Extension\RoutingExtension;
 use Symfony\Bridge\Twig\Extension\TranslationExtension;
 use Symfony\Bridge\Twig\Extension\FormExtension;
 use Symfony\Bridge\Twig\Extension\SecurityExtension;
-use Symfony\Bridge\Twig\Extension\HttpFoundationExtension;
-use Symfony\Bridge\Twig\Extension\HttpKernelExtension;
 use Symfony\Bridge\Twig\Form\TwigRendererEngine;
 use Symfony\Bridge\Twig\Form\TwigRenderer;
 
@@ -32,49 +28,32 @@ use Symfony\Bridge\Twig\Form\TwigRenderer;
  */
 class TwigServiceProvider implements ServiceProviderInterface
 {
-    public function register(Container $app)
+    public function register(Application $app)
     {
         $app['twig.options'] = array();
         $app['twig.form.templates'] = array('form_div_layout.html.twig');
         $app['twig.path'] = array();
         $app['twig.templates'] = array();
 
-        $app['twig.app_variable'] = function ($app) {
-            $var = new AppVariable();
-            if (isset($app['security.token_storage'])) {
-                $var->setTokenStorage($app['security.token_storage']);
-            }
-            if (isset($app['request_stack'])) {
-                $var->setRequestStack($app['request_stack']);
-            }
-            $var->setDebug($app['debug']);
-
-            return $var;
-        };
-
-        $app['twig'] = function ($app) {
+        $app['twig'] = $app->share(function ($app) {
             $app['twig.options'] = array_replace(
                 array(
-                    'charset' => $app['charset'],
-                    'debug' => $app['debug'],
+                    'charset'          => $app['charset'],
+                    'debug'            => $app['debug'],
                     'strict_variables' => $app['debug'],
                 ), $app['twig.options']
             );
 
-            $twig = $app['twig.environment_factory']($app);
-            // registered for BC, but should not be used anymore
-            // deprecated and should probably be removed in Silex 3.0
+            $twig = new \Twig_Environment($app['twig.loader'], $app['twig.options']);
             $twig->addGlobal('app', $app);
+            $twig->addExtension(new TwigCoreExtension());
 
             if ($app['debug']) {
                 $twig->addExtension(new \Twig_Extension_Debug());
             }
 
             if (class_exists('Symfony\Bridge\Twig\Extension\RoutingExtension')) {
-                $twig->addGlobal('global', $app['twig.app_variable']);
-
-                if (isset($app['request_stack'])) {
-                    $twig->addExtension(new HttpFoundationExtension($app['request_stack']));
+                if (isset($app['url_generator'])) {
                     $twig->addExtension(new RoutingExtension($app['url_generator']));
                 }
 
@@ -82,30 +61,18 @@ class TwigServiceProvider implements ServiceProviderInterface
                     $twig->addExtension(new TranslationExtension($app['translator']));
                 }
 
-                if (isset($app['security.authorization_checker'])) {
-                    $twig->addExtension(new SecurityExtension($app['security.authorization_checker']));
-                }
-
-                if (isset($app['fragment.handler'])) {
-                    $app['fragment.renderer.hinclude']->setTemplating($twig);
-
-                    $twig->addExtension(new HttpKernelExtension($app['fragment.handler']));
-                }
-
-                if (isset($app['assets.packages'])) {
-                    $twig->addExtension(new AssetExtension($app['assets.packages']));
+                if (isset($app['security'])) {
+                    $twig->addExtension(new SecurityExtension($app['security']));
                 }
 
                 if (isset($app['form.factory'])) {
-                    $app['twig.form.engine'] = function ($app) {
+                    $app['twig.form.engine'] = $app->share(function ($app) {
                         return new TwigRendererEngine($app['twig.form.templates']);
-                    };
+                    });
 
-                    $app['twig.form.renderer'] = function ($app) {
-                        $csrfTokenManager = isset($app['csrf.token_manager']) ? $app['csrf.token_manager'] : null;
-
-                        return new TwigRenderer($app['twig.form.engine'], $csrfTokenManager);
-                    };
+                    $app['twig.form.renderer'] = $app->share(function ($app) {
+                        return new TwigRenderer($app['twig.form.engine'], $app['form.csrf_provider']);
+                    });
 
                     $twig->addExtension(new FormExtension($app['twig.form.renderer']));
 
@@ -114,32 +81,28 @@ class TwigServiceProvider implements ServiceProviderInterface
                     $path = dirname($reflected->getFileName()).'/../Resources/views/Form';
                     $app['twig.loader']->addLoader(new \Twig_Loader_Filesystem($path));
                 }
-
-                if (isset($app['var_dumper.cloner'])) {
-                    $twig->addExtension(new DumpExtension($app['var_dumper.cloner']));
-                }
             }
 
             return $twig;
-        };
+        });
 
-        $app['twig.loader.filesystem'] = function ($app) {
+        $app['twig.loader.filesystem'] = $app->share(function ($app) {
             return new \Twig_Loader_Filesystem($app['twig.path']);
-        };
+        });
 
-        $app['twig.loader.array'] = function ($app) {
+        $app['twig.loader.array'] = $app->share(function ($app) {
             return new \Twig_Loader_Array($app['twig.templates']);
-        };
+        });
 
-        $app['twig.loader'] = function ($app) {
+        $app['twig.loader'] = $app->share(function ($app) {
             return new \Twig_Loader_Chain(array(
                 $app['twig.loader.array'],
                 $app['twig.loader.filesystem'],
             ));
-        };
-
-        $app['twig.environment_factory'] = $app->protect(function ($app) {
-            return new \Twig_Environment($app['twig.loader'], $app['twig.options']);
         });
+    }
+
+    public function boot(Application $app)
+    {
     }
 }

@@ -31,8 +31,8 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @expectedException \Silex\Exception\ControllerFrozenException
-     */
+    * @expectedException Silex\Exception\ControllerFrozenException
+    */
     public function testBindOnFrozenControllerShouldThrowException()
     {
         $controller = new Controller(new Route('/foo'));
@@ -68,22 +68,13 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array('bar' => $func), $controller->getRoute()->getOption('_converters'));
     }
 
-    public function testRun()
-    {
-        $controller = new Controller(new Route('/foo/{bar}'));
-        $ret = $controller->run($cb = function () { return 'foo'; });
-
-        $this->assertSame($ret, $controller);
-        $this->assertEquals($cb, $controller->getRoute()->getDefault('_controller'));
-    }
-
     /**
      * @dataProvider provideRouteAndExpectedRouteName
      */
-    public function testDefaultRouteNameGeneration(Route $route, $prefix, $expectedRouteName)
+    public function testDefaultRouteNameGeneration(Route $route, $expectedRouteName)
     {
         $controller = new Controller($route);
-        $controller->bind($controller->generateRouteName($prefix));
+        $controller->bind($controller->generateRouteName(''));
 
         $this->assertEquals($expectedRouteName, $controller->getRouteName());
     }
@@ -91,11 +82,10 @@ class ControllerTest extends \PHPUnit_Framework_TestCase
     public function provideRouteAndExpectedRouteName()
     {
         return array(
-            array(new Route('/Invalid%Symbols#Stripped', array(), array(), array(), '', array(), array('POST')), '', 'POST_InvalidSymbolsStripped'),
-            array(new Route('/post/{id}', array(), array(), array(), '', array(), array('GET')), '', 'GET_post_id'),
-            array(new Route('/colon:pipe|dashes-escaped'), '', '_colon_pipe_dashes_escaped'),
-            array(new Route('/underscores_and.periods'), '', '_underscores_and.periods'),
-            array(new Route('/post/{id}', array(), array(), array(), '', array(), array('GET')), 'prefix', 'GET_prefix_post_id'),
+            array(new Route('/Invalid%Symbols#Stripped', array(), array('_method' => 'POST')), 'POST_InvalidSymbolsStripped'),
+            array(new Route('/post/{id}', array(), array('_method' => 'GET')), 'GET_post_id'),
+            array(new Route('/colon:pipe|dashes-escaped'), '_colon_pipe_dashes_escaped'),
+            array(new Route('/underscores_and.periods'), '_underscores_and.periods'),
         );
     }
 

@@ -12,7 +12,9 @@
 namespace Silex\Tests;
 
 use Silex\Application;
+
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Stream test cases.
@@ -35,7 +37,7 @@ class StreamTest extends \PHPUnit_Framework_TestCase
         $i = 0;
 
         $stream = function () use (&$i) {
-            ++$i;
+            $i++;
         };
 
         $app = new Application();

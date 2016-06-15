@@ -34,6 +34,10 @@ trait TwigTrait
      */
     public function render($view, array $parameters = array(), Response $response = null)
     {
+        if (null === $response) {
+            $response = new Response();
+        }
+
         $twig = $this['twig'];
 
         if ($response instanceof StreamedResponse) {
@@ -41,9 +45,6 @@ trait TwigTrait
                 $twig->display($view, $parameters);
             });
         } else {
-            if (null === $response) {
-                $response = new Response();
-            }
             $response->setContent($twig->render($view, $parameters));
         }
 
@@ -56,7 +57,7 @@ trait TwigTrait
      * @param string $view       The view name
      * @param array  $parameters An array of parameters to pass to the view
      *
-     * @return string The rendered view
+     * @return Response A Response instance
      */
     public function renderView($view, array $parameters = array())
     {
