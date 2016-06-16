@@ -7,22 +7,43 @@ use Code\Sistema\Entity\Cliente;
 class ClienteMapper
 {
 
+   private $dados = [
+     0 => [
+         'id' => 0,
+         'nome' => 'Cliente XPTO',
+         'email' => 'clientexpto@gmail.com'
+     ],
+
+     1 => [
+         'id' => 1,
+         'nome' => 'Cliente Y',
+         'email' => 'clientey@gmail.com'
+     ],
+   ];
+
     public function insert(Cliente $cliente)
     {
 
         return [
-            'nome'=>'Cliente X',
-                'email' => 'email@clientex.com'
+            'success'=> true
         ];
     }
 
+    public function update ($id, array $array)
+    {
+        return [
+            'success'=>true
+        ];
+    }
+
+    public function find($id)
+    {
+        return $this->dados[$id];
+    }
+    
     public function fetchAll()
     {
-        $dados[0]['nome'] = "Cliente XPTO";
-        $dados[0]['email'] = "clientexpto@gmail.com";
-
-        $dados[1]['nome'] = "Cliente Y";
-        $dados[1]['email'] = "clientey@gmail.com";
+       $dados = $this->dados;
 
         return $dados;
 
