@@ -32,7 +32,7 @@ $config = new Doctrine\ORM\Configuration();
 $config->setProxyDir('/tmp');
 $config->setProxyNamespace('Proxy');
 $config->setAutoGenerateProxyClasses(true);
-$config->setMetadataCacheImpl($driverChain);
+$config->setMetadataDriverImpl($driverChain);
 $config->setMetadataCacheImpl($cache);
 $config->setQueryCacheImpl($cache);
 
