@@ -4,6 +4,7 @@
 namespace Code\Sistema\Service;
 
 use Code\Sistema\Entity\Cliente as ClienteEntity;
+use Code\Sistema\Entity\ClienteProfile;
 use Doctrine\ORM\EntityManager;
 
 class ClienteService
@@ -23,6 +24,18 @@ class ClienteService
         $clienteEntity = new ClienteEntity;
         $clienteEntity->setNome($data['nome']);
         $clienteEntity->setEmail($data['email']);
+
+        if(isset($data['rg']) AND isset($data['cpf'])){
+            $clienteProfile = new ClienteProfile();
+            $clienteProfile->setCpf($data['cpf']);
+            $clienteProfile->setRg($data['rg']);
+            $this->em->persist($clienteProfile);
+
+            //faz o relacionamento
+            $clienteEntity->setProfile($clienteProfile);
+
+
+        }
 
         $this->em->persist($clienteEntity);
         $this->em->flush();
@@ -47,7 +60,7 @@ class ClienteService
     public function fetchAll()
     {
         $repo = $this->em->getRepository("Code\Sistema\Entity\Cliente");
-        $result = $repo->findAll();
+        $result = $repo->getClientesOrdenados();
 
         return $result;
 

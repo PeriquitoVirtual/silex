@@ -28,10 +28,18 @@ $app->post("/api/clientes", function (Request $request) use ($app){
 
     $dados['nome'] = $request->get('nome');
     $dados['email'] = $request->get('email');
+    $dados['rg'] = $request->get('rg');
+    $dados['cpf'] = $request->get('cpf');
 
     $result = $app['clienteService']->insert($dados);
 
-    return $app->json($result);
+    $data['id'] = $result->getId();
+    $data['nome'] = $result->getNome();
+    $data['email'] = $result->getEmail();
+    $data['rg'] = $result->getProfile()->getRg();
+    $data['cpf'] = $result->getProfile()->getCpf();
+
+    return $app->json($data);
 });
 
 
