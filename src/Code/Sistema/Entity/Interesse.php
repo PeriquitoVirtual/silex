@@ -18,6 +18,15 @@ class Interesse
     private $id;
 
     /**
+     * @return mixed
+     */
+    public function getId()
+    {
+        return $this->id;
+    }
+
+ 
+    /**
      * @ORM\Column(type="string", length=255)
      */
     private $nome;

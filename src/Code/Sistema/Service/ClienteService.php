@@ -37,6 +37,15 @@ class ClienteService
 
         }
 
+        if (count($data['interesse'])){
+            $interesses = explode(",", $data['interesse']);
+
+            foreach ($interesses as $rowInteresse){
+                $interesseEntity = $this->em->getReference("Code\Sistema\Entity\Interesse", $rowInteresse);
+                $clienteEntity->addInteresse($interesseEntity);
+            }
+        }
+
         $this->em->persist($clienteEntity);
         $this->em->flush();
 
