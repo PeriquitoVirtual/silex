@@ -10,7 +10,6 @@ use Doctrine\ORM\Mapping as ORM;
 
 class Interesse
 {
-
     /**
      * @ORM\Id
      * @ORM\Column(type="integer")
@@ -22,5 +21,24 @@ class Interesse
      * @ORM\Column(type="string", length=255)
      */
     private $nome;
+
+
+    /**
+     * @return mixed
+     */
+    public function getNome()
+    {
+        return $this->nome;
+    }
+
+    /**
+     * @param mixed $nome
+     */
+    public function setNome($nome)
+    {
+        $this->nome = $nome;
+    }
+
+
 
 }
